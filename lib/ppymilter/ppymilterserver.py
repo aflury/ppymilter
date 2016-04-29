@@ -65,7 +65,7 @@ class AsyncPpyMilterServer(asyncore.dispatcher):
   """
 
   # TODO: allow network socket interface to be overridden
-  def __init__(self, sock_info_or_port, milter_class, max_queued_connections=1024, map=None, context=None):
+  def __init__(self, sock_info_or_port, milter_class, max_queued_connections=1024, map=None, context=None, extra_jobs=None):
     """Constructs an AsyncPpyMilterServer.
 
     Args:
@@ -75,6 +75,8 @@ class AsyncPpyMilterServer(asyncore.dispatcher):
                     milter commands (e.g. a child of the PpyMilter class).
       max_queued_connections: Maximum number of connections to allow to
                               queue up on socket awaiting accept().
+      extra_jobs: Number of additional processes to fork after bind()ing.
+                  Useful for making use of miltiple CPU cores.
     """
     self.map     = map
     self.context = context
@@ -91,6 +93,10 @@ class AsyncPpyMilterServer(asyncore.dispatcher):
     self.create_socket(sock_family, sock_type)
     self.set_reuse_addr()
     self.bind(sock_addr)
+    if extra_jobs:
+        for job in xargs(extra_jobs):
+            if os.fork() == 0:
+                break
     self.listen(max_queued_connections)
 
   def handle_accept(self):
